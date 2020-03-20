@@ -121,19 +121,19 @@ public class HandleFile {
     }
 
     //统计更复杂的数据（代码行 / 空行 / 注释行）
-    private static Integer[] LineStatistics(String content) {
+    public static Integer[] LineStatistics(String content) {
         //顺序为：空行 / 注释行
-        Integer[] lines = {0, 0};
+        Integer[] lines = {0, 0, 0};
 
         //统计空行数
         if (content.equals("") || content.matches("[\\{\\}]")) {
             lines[0]++;
         }
         //统计注释行
-        if (content.matches("(.*)\\/\\/(.*)")) {
+        else  if (content.matches("(.*)\\/\\/(.*)")) {
             lines[1]++;
         }
-        else if (content.startsWith("/*") && content.endsWith("*/")) {
+        else if (content.matches(".*\\/\\*.*\\*\\/")) {
             //说明使用了/**/的注释形式
             lines[1]++;
         }
@@ -148,6 +148,16 @@ public class HandleFile {
         }
         else if (isNotes == true) {
             lines[1]++;
+        }
+        //统计代码行
+        if (content.matches(".{2,}") && isNotes == false && content.matches("(.*)[^\\\\/\\\\*](.*)")) {
+            //去除掉注释部分任然含有两个及以上字符则就是代码行
+            String copy = content;
+            copy = copy.replaceAll("\\/\\*.*\\*\\/", "");
+            copy = copy.replaceAll("\\/\\/(.*)", "").trim();
+            if (copy.matches(".{2,}")) {
+                lines[2]++;
+            }
         }
         return lines;
     }
@@ -188,6 +198,10 @@ public class HandleFile {
 
         //注释行
         Integer notesLine = 0;
+
+        //代码行
+        Integer codeLine = 0;
+
         try {
             //判断文件类型是否符合
             if (!isPermit(file.getName())) {
@@ -216,6 +230,7 @@ public class HandleFile {
                         Integer[] lines = LineStatistics(content);
                         nullLine += lines[0];
                         notesLine += lines[1];
+                        codeLine += lines[2];
                         break;
                     case "-x":
                         //统计全部信息
@@ -225,6 +240,7 @@ public class HandleFile {
                         Integer[] Lines = LineStatistics(content);
                         nullLine += Lines[0];
                         notesLine += Lines[1];
+                        codeLine += Lines[2];
                         break;
                     case "-l":
                         break;
@@ -245,7 +261,7 @@ public class HandleFile {
                     return file.getName() + ":\r\n" +
                             "文件空行数：" + nullLine + "\r\n" +
                             "文件注释行数：" + notesLine + "\r\n" +
-                            "代码行数：" + (line - nullLine - notesLine);
+                            "代码行数：" + codeLine;
                 case "-x":
                     return file.getName() + ":\r\n" +
                             "文件总字符数：" + charNum + "\r\n" +
@@ -253,7 +269,7 @@ public class HandleFile {
                             "文件总行数：" + line + "\r\n" +
                             "文件空行数：" + nullLine + "\r\n" +
                             "文件注释行数：" + notesLine + "\r\n" +
-                            "代码行数：" + (line - nullLine - notesLine);
+                            "代码行数：" + codeLine;
                 default:
                     return "不支持的命令格式";
             }
